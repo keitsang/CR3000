@@ -43,7 +43,7 @@
 'Date:
 'Program author:
 
-StationName ("3M Buoy")
+StationName ("12-05 2023")
 
 'Declare Constants
 Const SCANRATE = 5
@@ -55,17 +55,13 @@ Const MODEMCYC = 180 'the overall modem pattern length
 Const SETUPSTR = "AT&F0 S0=1 &D0 +IPR=6,0 V0 &K0 &W0 &Y0" & CHR(13) & CHR(10)
 Const REGSTR = "ATDT1234" &CHR (13) & CHR (10)
 
-Const VANCOR = 0
-Const MAGDEC = -11.66
-'2022-04-22	11.66° W  ± 0.39°  changing by  0.04° E per year
+Const VANCOR = 180
+Const MAGDEC = -11.62
 
-'Latitude: 43.5161° North
-'Longitude: 77.0537° West
-'Date: 2020-03-12
-'Magnetic declination: 11° 53.28' West
-'Annual Change (minutes/year): 1.3 '/y East
-'Grid Declination: 10° 28.42' West
-'Convergence Angle: 1° 24.86' West
+'Latitude: 	43.5161° N
+'Longitude: 	77.0537° W
+'2023-03-08
+'11.62° W  ± 0.39°  changing by  0.04° E per year 
 
 Const SIGMA = 5.67 * 10^-8
 Const A = 1.0295 * 10^-3
