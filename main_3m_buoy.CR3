@@ -43,44 +43,39 @@
 'Date:
 'Program author:
 
-StationName ("3M Buoy")
+StationName ("12-06 2023")
 
 'Declare Constants
 Const SCANRATE = 5
 Const STIMEOUT = 500
-Const MODEMSTART = 100 'how many minutes into the cycle before the modem turns on
+Const MODEMSTART = 120 'how many minutes into the cycle before the modem turns on
 Const MODEMDUR = 20 'how long the modem stays on
 Const MODEMCYC = 180 'the overall modem pattern length
 
 Const SETUPSTR = "AT&F0 S0=1 &D0 +IPR=6,0 V0 &K0 &W0 &Y0" & CHR(13) & CHR(10)
 Const REGSTR = "ATDT1234" &CHR (13) & CHR (10)
 
-Const VANCOR = 0
-Const MAGDEC = -11.66
-'2022-04-22	11.66° W  ± 0.39°  changing by  0.04° E per year
+Const VANCOR = 180
+Const MagDec = -10.95
 
-'Latitude: 43.5161° North
-'Longitude: 77.0537° West
-'Date: 2020-03-12
-'Magnetic declination: 11° 53.28' West
-'Annual Change (minutes/year): 1.3 '/y East
-'Grid Declination: 10° 28.42' West
-'Convergence Angle: 1° 24.86' West
+'Latitude: 	43.5860° N
+'Longitude: 	78.2299° W
+'2023-03-08
+'10.95° W  ± 0.39°  changing by  0.03° E per year 
 
 Const SIGMA = 5.67 * 10^-8
 Const A = 1.0295 * 10^-3
 Const B = 2.391 * 10^-4
 Const C = 1.568 * 10^-7
 
-Const PSP = 8.11 '19230
-Const PIR = 3.04 '33933
-
-Const SETRAMULT = 0.005197  '6978526, cert 10965, y = 0.005197x + 79.997960
-Const SETRAOFF = 79.997960
-Const RHMULT = 0.092009  '51377102/139137, cert 11015, y = 0.092009x + 8.382074
-Const RHOFF = 8.382074
-Const RTMULT = 0.099242  'cert 10995, y = 0.099242x - 39.765935
-Const RTOFF = -39.765935
+Const PSP = 8.71 'S/N  10898
+Const PIR = 4.10 ' S/N 12364 
+Const SETRAMULT = 0.005993 '5423034, cert 10958, y = 0.005993x + 80.026839
+Const SETRAOFF = 80.026839
+Const RHMULT = 0.096834  '60163774, cert 11020, y = 0.096834x + 5.377836
+Const RHOFF = 5.377836
+Const RTMULT = 0.100187  '60163774 , cert 11001, y = 0.100187x - 40.147779
+Const RTOFF = -40.147779
 
 'Declare Public Variables
 Public Windspeed,VanDir,WDCalcul,Buoy_Dir
