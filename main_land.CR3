@@ -1,0 +1,186 @@
+'CR3000 Series Datalogger
+
+'SE1 (1H):	Wind Direction AZ+
+'SE2 (1L):	Setra Barometric Pressure Signal
+'
+'SE3 (2H):	Rotronic AT
+'SE4 (2L):	Rotronic RH
+'
+'SE5 (3H):	NOT Used – Future Integration
+'SE6 (3L):	NOT Used
+'
+'Diff4 (4H):	PSP Signal+
+'Diff4 (4L):	PSP Signal-
+'
+'Diff5 (5H):	NOT Used – PAR channel If added in future
+'Diff5 (5L)L	NOT Used
+'
+'Diff6 (6H):	PIR Signal-
+'Diff6 (6L):	PIR Signal+
+'
+'Diff7 (7H):	PIR Tcase+
+'Diff7 (7L):	PIR Tdome+
+'
+'Diff8 (8H) :	10 :1 Battery Voltage+
+'Diff8 8L) :	10 :1 Battery Voltage-
+'
+'VX1 :	RM Young Wind Direction Az Excitation
+'VX2:	PIR 44301 Thermistor Tcase & Tdome Excitation
+'
+'
+'P1:	RM Young Wind Speed WS+
+'
+'C8	Cell OR Iridium Modem Control Trigger
+
+
+'Date:
+'Program author:
+
+'Declare Constants
+Const SCANRATE = 5
+Const STIMEOUT = 500
+Const MODEMSTART = 100 'how many minutes into the cycle before the modem turns on
+Const MODEMDUR = 20 'how long the modem stays on
+Const MODEMCYC = 180 'the overall modem pattern length
+
+Const SETUPSTR = "AT&F0 S0=1 &D0 +IPR=6,0 V0 &K0 &W0 &Y0" & CHR(13) & CHR(10)
+Const REGSTR = "ATDT1234" &CHR (13) & CHR (10)
+
+Const VANCOR = 0
+Const MAGDEC = -11.66
+'2022-04-22	11.66° W  ± 0.39°  changing by  0.04° E per year
+
+'Latitude: 43.5161° North
+'Longitude: 77.0537° West
+'Date: 2020-03-12
+'Magnetic declination: 11° 53.28' West
+'Annual Change (minutes/year): 1.3 '/y East
+'Grid Declination: 10° 28.42' West
+'Convergence Angle: 1° 24.86' West
+
+Const SIGMA = 5.67 * 10^-8
+Const A = 1.0295 * 10^-3
+Const B = 2.391 * 10^-4
+Const C = 1.568 * 10^-7
+
+Const PSP = 8.11 '19230
+Const PIR = 3.04 '33933
+
+Const SETRAMULT = 0.005197  '6978526, cert 10965, y = 0.005197x + 79.997960
+Const SETRAOFF = 79.997960
+Const RHMULT = 0.092009  '51377102/139137, cert 11015, y = 0.092009x + 8.382074
+Const RHOFF = 8.382074
+Const RTMULT = 0.099242  'cert 10995, y = 0.099242x - 39.765935
+Const RTOFF = -39.765935
+
+'Declare Public Variables
+Public StartUp, ModemOn
+Public Windspeed,VanDir,WDCalcul,Buoy_Dir
+Public AirTemp,RelHum,BarPress
+Public SolarRad,PIR_F,PIRcor_F,PIRcor_FG,TEppley(2),Vt(2)
+Public AirTemp_V,RelHum_V,BarPress_V,SolarRad_V,PIR_F_V
+Public PanTemp,BattVolt,Sig,LoggerVolt
+Public LoggerID As Long
+
+'Declare Private Variables
+Dim Work1(2),Work2(2),i1
+Dim MeanWS
+Dim VectorWS
+Dim VectorWD
+Dim StDevWD
+
+'Define Units
+Units MeanWS = m/s
+Units VectorWS = m/s
+Units VectorWD = Deg T
+Units StDevWD = Deg T
+Units AirTemp=Deg C
+Units RelHum=%
+Units Windspeed=m/s
+Units VanDir=Dir
+Units WDCalcul=Dir T
+Units Buoy_Dir=Deg T
+Units SolarRad=kJ/m^2
+Units PIRcor_FG=kJ/m^2
+Units PIRcor_F=W/m^2
+Units PIR_F=W/m^2
+Units TEppley=Deg C
+Units BarPress=kPa
+Units PanTemp=Deg C
+Units BattVolt=V
+Units LoggerVolt=V
+Units AirTemp_V=V
+Units RelHum_V=V
+Units BarPress_V=V
+Units SolarRad_V=V
+Units PIR_F_V=V
+
+
+
+'Define Data Tables.
+Include "datatables.cr3"
+
+'Main Program
+BeginProg
+  Scan (SCANRATE,Sec,0,0)
+
+
+    ' Read RM Young Wind Vane
+    BrHalf(VanDir,1,mV5000,1,VX1,1,5000,True,0,250,355,0)
+    VanDir = (VanDir + VANCOR) MOD 360
+    ' Add correction to Buoy Direction due to mount orientation or magnetic declination.
+    Buoy_Dir = (Buoy_Dir + MAGDEC) MOD 360 '(360-11.926 degrees)
+    ' Add RM Young Van Direction to KVH Buoy Dir to get wind direction calculated
+    WDCalcul = (VanDir + Buoy_Dir) MOD 360
+
+    ' Measure the Setra Barometric Pressure (coeffs using cal sheet)
+    VoltSe(BarPress_V,1,mV5000,2,true,0,250,1,0)
+    BarPress = BarPress_V * SETRAMULT + SETRAOFF
+
+    ' Measure the MP102 temperature
+    VoltSe (AirTemp_V,1,mV5000,3,True,0,250,1,0)
+    AirTemp = AirTemp_V * RTMULT + RTOFF
+
+    ' Measure the MP102 relative humidity
+    VoltSe (RelHum_V,1,mV5000,4,1,0,250,1,0)
+    RelHum = RelHum_V * RHMULT + RHOFF
+
+    ' Read Eppley Pyranometer PSP
+    VoltDiff(SolarRad_V,1,mV50,4,true,0,250,1,0)
+    SolarRad = SolarRad_V * 5 / PSP
+
+    ' Read Eppley Pygeometer PIR
+    VoltDiff(PIR_F_V,1,mV50,6,true,0,250,1,0)
+    PIR_F = PIR_F_V * 1000 / PIR
+    ' Read Eppley Pygeometer Case and Dome temperture
+    BrHalf (Vt,2,mV1000,13,Vx2,2,508,False,10000,250,1.0,0)
+    ' Convert voltage ratios to temperatue
+    For i1 = 1 To 2
+      Work1(i1) = 10000 * (Vt(i1) / (1 -Vt(i1)))
+      Work2(i1) = 1 / (A + B *LN(Work1(i1)) + C * (LN(Work1(i1))^3)) ' Work2 in deg K
+      TEppley(i1) = Work2(i1)-273.15 ' Tcase and Tdome in deg C
+    Next i1
+    'Correct PIR for case and dome temperature
+    PIRcor_F = PIR_F + (0.99 * SIGMA * Work2(1) ^ 4) - (3.7 * SIGMA * (Work2(2)^4-Work2(1)^4)) ' W/m^2
+    PIRcor_FG = PIRcor_F * SCANRATE/1000 ' Convert from W/m^2 to KJ/m^2 (5 second scan rate)
+
+    'Station battery voltage
+    VoltDiff (BattVolt,1,mV5000,8,True ,0,250,.01,0)
+
+    ' Read RM Young Anemometer, Input P1
+    PulseCount(Windspeed,1,1,1,1,0.098,0.0001)
+
+    PanelTemp (PanTemp,60)
+    Battery (LoggerVolt)
+    Sig = Status.ProgSignature(1,1)/1000
+    LoggerID = Status.SerialNumber
+
+
+    'Include "modem.CR3"
+
+    'Call Output Tables
+    'Example:
+  NextScan
+
+EndProg
+

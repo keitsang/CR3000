@@ -1,0 +1,34 @@
+    Public StartUp, ModemOn
+    ' Turn on the modem on startup
+    If (StartUp < 20*60) Then
+      ModemOn = True
+      StartUp = StartUp + SCANRATE
+    Else If (StartUp = 20*60) Then
+      ModemOn = False
+      StartUp = StartUp + SCANRATE
+    EndIf
+
+    ' For every MODEMCYC minutes, turn on modem after MODEMSTART minutes have passed
+    If TimeIntoInterval(MODEMSTART,MODEMCYC,Min) Then
+      ModemOn = True
+    EndIf
+    ' Turn off modem after MODEMDUR minutes has passed
+    If TimeIntoInterval(MODEMSTART+MODEMDUR,MODEMCYC,Min) Then
+      ModemOn = False
+    EndIf
+
+    'Power cycle modems at midnight    
+    If TimeIntoInterval(5*60,24*60,Min) Then
+      ModemOn = False
+    EndIf
+    If TimeIntoInterval(5*60+1,24*60,Min) Then
+      ModemOn = True
+    EndIf
+
+    If ModemOn Then ' Turns modem on
+      PortSet (8 ,1 )
+      SerialOpen (ComMe,19200,0,0,10000)
+    Else
+      PortSet (8 ,0 ) ' Turns modem off
+      SerialClose (ComMe)
+    EndIf

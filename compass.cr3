@@ -1,0 +1,34 @@
+  SlowSequence '**************************** Compass *****************************************
+
+  'Public CompStr As String
+  Public DirStr As String
+  Public PRStr As String
+
+  SerialOpen (Com1,9600,0,0,100)
+  SerialOut (Com1,"h" + CHR(13),":",0,STIMEOUT)
+  Delay (1,1000,mSec)
+  SerialOut (Com1,"sdo=t" + CHR(13),":",0,STIMEOUT)
+  SerialClose (Com1)
+
+  Scan (5,sec,3,0)
+    ' Read TCM2, Input C2
+    SerialOpen (Com1,9600,0,0,100)
+
+    SerialOut (Com1,"c?" + CHR(13),":",0,STIMEOUT)
+    SerialIn (DirStr,Com1,STIMEOUT,CHR(13),50)'Take measurement
+
+    'SerialFlush(Com1)
+    'SerialOut (Com1,"i?" + CHR(13),":",0,STIMEOUT) '
+    'SerialIn (PRStr,Com1,STIMEOUT,CHR(13),50)'Take measurement
+
+    SerialClose (Com1)
+
+    SplitStr(DirStr,DirStr,"E",1,5)
+    SplitStr(PRStr,PRStr,"E",1,5)
+
+    SplitStr (Buoy_Dir,DirStr,"$C",1,4)
+    'SplitStr (Roll,PRStr,"R",1,4)
+    'SplitStr (Pitch,PRStr,"$P",1,4)
+    'CallTable (TableCompass)
+  NextScan
+  EndSequence '**************************** Compass *****************************************

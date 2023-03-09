@@ -1,0 +1,32 @@
+        ' Set Flag1 to turn on the modem on startup
+    If (StartUp < 20*60) Then
+      ModemOn = True
+      StartUp = StartUp + SCANRATE
+    Else If (StartUp = 20*60) Then
+      ModemOn = False
+      StartUp = StartUp + SCANRATE
+    EndIf
+
+    ' For every MODEMCYC minutes, turn on modem after MODEMSTART minutes have passed
+    If TimeIntoInterval(MODEMSTART,MODEMCYC,Min) Then
+      ModemOn = True
+    EndIf
+    ' Send Iridium setup strings after mode has booted up
+    If TimeIntoInterval(MODEMSTART+1,MODEMCYC,Min) Then
+      SerialOut (ComMe,SETUPSTR,"",0,0)
+    EndIf
+    If TimeIntoInterval(MODEMSTART+2,MODEMCYC,Min) Then
+      SerialOut (ComMe,REGSTR,"",0,0)
+    EndIf
+    ' Turn off modem after MODEMDUR minutes has passed
+    If TimeIntoInterval(MODEMSTART+MODEMDUR,MODEMCYC,Min) Then
+      ModemOn = False
+    EndIf
+
+    If ModemOn Then ' Turns modem on
+      PortSet (8 ,1 )
+      SerialOpen (ComMe,19200,0,0,10000)
+    Else
+      PortSet (8 ,0 ) ' Turns modem off
+      SerialClose (ComMe)
+    EndIf
