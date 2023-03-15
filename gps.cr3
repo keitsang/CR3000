@@ -1,0 +1,36 @@
+  SlowSequence '**************************** GPS *****************************************
+  Public ParseStrRMC(13) As String * 15
+  Public ParseBlock(10) As String * 80  'Split blook into 10 different lines
+  Public GPSData As String * 1000 ' Input blook from GPS
+  Public I, RMCLine
+
+  Alias ParseStrRMC(2) = GPSTime
+  Alias ParseStrRMC(4) = Latitude
+  Alias ParseStrRMC(5) = SLat
+  Alias ParseStrRMC(6) = Longitude
+  Alias ParseStrRMC(7) = SLong
+  Alias ParseStrRMC(8) = SOG
+  Alias ParseStrRMC(9) = COG
+  Alias ParseStrRMC(10) = GPSDate
+
+  SerialOpen (Com2,9600,0,0,500)
+  Scan (60,Min,0,0)
+    SW12 (2,1)
+    Delay (0,2,Min)
+    'Enter other measurement instructions
+    'Call Output Tables
+    'Example:
+    SerialInBlock (Com2,GPSData,500)
+    ' Split the block into 10 linees of information
+    SplitStr (ParseBlock,GPSData,CHR(13)+CHR(10),10,5)
+    ' Find the necessary strings and parse them
+    For I = 10 To 1 Step -1
+      If Mid(ParseBlock(I),4,3) = "RMC" Then
+        SplitStr (ParseStrRMC(1),ParseBlock(I),CHR(44),13,5)
+        RMCLine=I
+      EndIf
+    Next I
+    SerialFlush (Com2)
+    SW12(2,0)
+  NextScan
+  EndSequence '**************************** GPS *****************************************
