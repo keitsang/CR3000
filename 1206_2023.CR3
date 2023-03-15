@@ -1,0 +1,329 @@
+'CR3000 Series Datalogger
+'3-meter Buoys: CR3000	
+'	
+'SE1 (1H):	Wind Direction AZ+
+'SE2 (1L):	Setra Barometric Pressure Signal
+'	
+'SE3 (2H):	Rotronic AT
+'SE4 (2L):	Rotronic RH
+'	
+'SE5 (3H):	Water Temperature 107B Signal
+'SE6 (3L) :	Not Used – Future Integration
+'	
+'Diff4 (4H):	PSP Signal+
+'Diff4 (4L):	PSP Signal-
+'	
+'Diff5 (5H):	Not Used – PAR channel if added in future
+'Diff5 (5L)L	NOT Used
+'	
+'Diff6 (6H):	PIR Signal-
+'Diff6 (6L):	PIR Signal+
+'	
+'Diff7 (7H):	PIR Tcase+
+'Diff7 (7L):	PIR Tdome+
+'	
+'Diff8 (8H) :	10 :1 Battery Voltage+
+'Diff8 8L) :	10 :1 Battery Voltage-
+'	
+'VX1 :	RM Young Wind Direction Az Excitation
+'VX2:	PIR 44301 Thermistor Tcase & Tdome Excitation
+'VX3:	Water Temperature W107B Excitation
+'	
+'P1:	RM Young Wind Speed WS+
+'	
+'Com1 (C1):	Compass RS-232 TX
+'Com1 (C2):	Compass RS-232 RX
+'	
+'Com2 (C3):	GPS RS-232 TX
+'Com2 (C4) :	GPS RS-232 RX
+'	
+'C8	Cell OR Iridium Modem Control Trigger
+
+'
+'Date:
+'Program author:
+
+StationName ("12-06 2023")
+
+'Declare Constants
+Const SCANRATE = 5
+Const STIMEOUT = 500
+Const MODEMSTART = 120 'how many minutes into the cycle before the modem turns on
+Const MODEMDUR = 20 'how long the modem stays on
+Const MODEMCYC = 180 'the overall modem pattern length
+
+Const SETUPSTR = "AT&F0 S0=1 &D0 +IPR=6,0 V0 &K0 &W0 &Y0" & CHR(13) & CHR(10)
+Const REGSTR = "ATDT1234" &CHR (13) & CHR (10)
+
+Const VANCOR = 180
+Const MagDec = -10.95
+
+'Latitude: 	43.5860° N
+'Longitude: 	78.2299° W
+'2023-03-08
+'10.95° W  ± 0.39°  changing by  0.03° E per year 
+
+Const SIGMA = 5.67 * 10^-8
+Const A = 1.0295 * 10^-3
+Const B = 2.391 * 10^-4
+Const C = 1.568 * 10^-7
+
+Const PSP = 8.71 'S/N  10898
+Const PIR = 4.10 ' S/N 12364 
+Const SETRAMULT = 0.005993 '5423034, cert 10958, y = 0.005993x + 80.026839
+Const SETRAOFF = 80.026839
+Const RHMULT = 0.096834  '60163774, cert 11020, y = 0.096834x + 5.377836
+Const RHOFF = 5.377836
+Const RTMULT = 0.100187  '60163774 , cert 11001, y = 0.100187x - 40.147779
+Const RTOFF = -40.147779
+
+'Declare Public Variables
+Public Windspeed,VanDir,WDCalcul,Buoy_Dir
+Public WaterTemp
+Public AirTemp,RelHum,BarPress
+Public SolarRad,PIR_F,PIRcor_F,PIRcor_FG,TEppley(2),Vt(2)
+Public AirTemp_V,RelHum_V,BarPress_V,SolarRad_V,PIR_F_V
+Public PanTemp,BattVolt,Sig,LoggerVolt
+Public LoggerID As Long
+Public ModemOn = True
+Public StartUp = True
+
+'Declare Private Variables
+Dim Work1(2),Work2(2),i1
+Dim MeanWS
+Dim VectorWS
+Dim VectorWD
+Dim StDevWD
+
+'Define Units
+Units MeanWS = m/s
+Units VectorWS = m/s
+Units VectorWD = Deg T
+Units StDevWD = Deg T
+Units AirTemp=Deg C
+Units RelHum=%
+Units Windspeed=m/s
+Units VanDir=Dir
+Units WDCalcul=Dir T
+Units Buoy_Dir=Deg T
+Units SolarRad=kJ/m^2
+Units PIRcor_FG=kJ/m^2
+Units PIRcor_F=W/m^2
+Units PIR_F=W/m^2
+Units TEppley=Deg C
+Units BarPress=kPa
+Units PanTemp=Deg C
+Units BattVolt=V
+Units LoggerVolt=V
+Units AirTemp_V=V
+Units RelHum_V=V
+Units BarPress_V=V
+Units SolarRad_V=V
+Units PIR_F_V=V
+
+
+'Define Data Tables.
+DataTable(Table10,true,-1)
+   OpenInterval
+   DataInterval(0,10,Min,10)
+   Average(1,AirTemp,FP2, 0)
+   Average(1,RelHum,FP2,0)
+   Average(1,WaterTemp,FP2, 0)
+   Maximum(1,AirTemp,FP2,0,False)
+   Minimum(1,AirTemp,FP2,0,False)
+   Sample(1,Buoy_Dir,FP2)
+   Totalize(1,SolarRad,FP2,0)
+   Totalize(1,PIRcor_FG,FP2,0)
+   Average(1,PIRcor_F,FP2,0)
+   Average(1,PIR_F,FP2,0)
+   Average(2,TEppley(),FP2,False)
+   WindVector(1, Windspeed, WDCalcul, FP2, 0, 0, 0, 2)
+   FieldNames("MeanWS,VectorWS,VectorWD,StDevWD")
+   Maximum(1,Windspeed,FP2,0,False)
+   Sample(1,BarPress,FP2)
+EndTable
+
+DataTable(Table60,true,-1)
+   OpenInterval
+   DataInterval(0,60,Min,10)
+   Sample(1,PanTemp,FP2)
+   Sample(1,LoggerVolt,FP2)
+   Sample(1,Sig,FP2)
+   Sample(1,LoggerID,Long)
+   Sample(1,BattVolt,FP2)
+   Sample (1,GPSDate,String)
+   Sample (1,GPSTime,String)
+   Sample (1,Latitude,String)
+   Sample (1,Longitude,String)
+   Sample (1,SLat,String)
+   Sample (1,SLong,String)
+EndTable
+
+'Main Program
+BeginProg
+  Scan (SCANRATE,Sec,0,0)
+
+
+    ' Read RM Young Wind Vane
+    BrHalf(VanDir,1,mV5000,1,VX1,1,5000,True,0,250,355,0)
+    VanDir = (VanDir + VANCOR) MOD 360
+    ' Add correction to Buoy Direction due to mount orientation or magnetic declination.
+    Buoy_Dir = (Buoy_Dir + MAGDEC) MOD 360 '(360-11.926 degrees)
+    ' Add RM Young Van Direction to KVH Buoy Dir to get wind direction calculated
+    WDCalcul = (VanDir + Buoy_Dir) MOD 360
+
+    ' Measure the Setra Barometric Pressure (coeffs using cal sheet)
+    VoltSe(BarPress_V,1,mV5000,2,true,0,250,1,0)
+    BarPress = BarPress_V * SETRAMULT + SETRAOFF
+
+    ' Measure the MP102 temperature
+    VoltSe (AirTemp_V,1,mV5000,3,True,0,250,1,0)
+    AirTemp = AirTemp_V * RTMULT + RTOFF
+
+    ' Measure the MP102 relative humidity
+    VoltSe (RelHum_V,1,mV5000,4,1,0,250,1,0)
+    RelHum = RelHum_V * RHMULT + RHOFF
+
+    ' Read Water Temperature with 107B Probe
+    Therm107(WaterTemp,1,5,VX3,0,250,1,0)
+
+    ' Read Eppley Pyranometer PSP
+    VoltDiff(SolarRad_V,1,mV50,4,true,0,250,1,0)
+    SolarRad = SolarRad_V * 5 / PSP
+
+    ' Read Eppley Pygeometer PIR
+    VoltDiff(PIR_F_V,1,mV50,6,true,0,250,1,0)
+    PIR_F = PIR_F_V * 1000 / PIR
+    ' Read Eppley Pygeometer Case and Dome temperture
+    BrHalf (Vt,2,mV1000,13,Vx2,2,508,False,10000,250,1.0,0)
+    ' Convert voltage ratios to temperatue
+    For i1 = 1 To 2
+      Work1(i1) = 10000 * (Vt(i1) / (1 -Vt(i1)))
+      Work2(i1) = 1 / (A + B *LN(Work1(i1)) + C * (LN(Work1(i1))^3)) ' Work2 in deg K
+      TEppley(i1) = Work2(i1)-273.15 ' Tcase and Tdome in deg C
+    Next i1
+    'Correct PIR for case and dome temperature
+    PIRcor_F = PIR_F + (0.99 * SIGMA * Work2(1) ^ 4) - (3.7 * SIGMA * (Work2(2)^4-Work2(1)^4)) ' W/m^2
+    PIRcor_FG = PIRcor_F * SCANRATE/1000 ' Convert from W/m^2 to KJ/m^2 (5 second scan rate)
+
+    'Station battery voltage
+    VoltDiff (BattVolt,1,mV5000,8,True ,0,250,.01,0)
+
+    ' Read RM Young Anemometer, Input P1
+    PulseCount(Windspeed,1,1,1,1,0.098,0.0001)
+
+    PanelTemp (PanTemp,60)
+    Battery (LoggerVolt)
+    Sig = Status.ProgSignature(1,1)/1000
+    LoggerID = Status.SerialNumber
+
+    ' Set Flag1 to turn on the modem on startup
+    If (StartUp < 20*60) Then
+      ModemOn = True
+      StartUp = StartUp + SCANRATE
+    Else If (StartUp = 20*60) Then
+      ModemOn = False
+      StartUp = StartUp + SCANRATE
+    EndIf
+
+    ' For every MODEMCYC minutes, turn on modem after MODEMSTART minutes have passed
+    If TimeIntoInterval(MODEMSTART,MODEMCYC,Min) Then
+      ModemOn = True
+    EndIf
+    ' Send Iridium setup strings after mode has booted up
+    If TimeIntoInterval(MODEMSTART+1,MODEMCYC,Min) Then
+      SerialOut (ComMe,SETUPSTR,"",0,0)
+    EndIf
+    If TimeIntoInterval(MODEMSTART+2,MODEMCYC,Min) Then
+      SerialOut (ComMe,REGSTR,"",0,0)
+    EndIf
+    ' Turn off modem after MODEMDUR minutes has passed
+    If TimeIntoInterval(MODEMSTART+MODEMDUR,MODEMCYC,Min) Then
+      ModemOn = False
+    EndIf
+
+    If ModemOn Then ' Turns modem on
+      PortSet (8 ,1 )
+      SerialOpen (ComMe,19200,0,0,10000)
+    Else
+      PortSet (8 ,0 ) ' Turns modem off
+      SerialClose (ComMe)
+    EndIf
+
+    'Call Output Tables
+    CallTable (Table10)
+    CallTable (Table60)
+  NextScan
+
+  SlowSequence '**************************** Compass *****************************************
+
+  'Public CompStr As String
+  Public DirStr As String
+  Public PRStr As String
+
+  SerialOpen (Com1,9600,0,0,100)
+  SerialOut (Com1,"h" + CHR(13),":",0,STIMEOUT)
+  Delay (1,1000,mSec)
+  SerialOut (Com1,"sdo=t" + CHR(13),":",0,STIMEOUT)
+  SerialClose (Com1)
+
+  Scan (5,sec,3,0)
+    ' Read TCM2, Input C2
+    SerialOpen (Com1,9600,0,0,100)
+
+    SerialOut (Com1,"c?" + CHR(13),":",0,STIMEOUT)
+    SerialIn (DirStr,Com1,STIMEOUT,CHR(13),50)'Take measurement
+
+    'SerialFlush(Com1)
+    'SerialOut (Com1,"i?" + CHR(13),":",0,STIMEOUT) '
+    'SerialIn (PRStr,Com1,STIMEOUT,CHR(13),50)'Take measurement
+
+    SerialClose (Com1)
+
+    SplitStr(DirStr,DirStr,"E",1,5)
+    SplitStr(PRStr,PRStr,"E",1,5)
+
+    SplitStr (Buoy_Dir,DirStr,"$C",1,4)
+    'SplitStr (Roll,PRStr,"R",1,4)
+    'SplitStr (Pitch,PRStr,"$P",1,4)
+    'CallTable (TableCompass)
+  NextScan
+  EndSequence '**************************** Compass *****************************************
+  SlowSequence '**************************** GPS *****************************************
+  Public ParseStrRMC(13) As String * 15
+  Public ParseBlock(10) As String * 80  'Split blook into 10 different lines
+  Public GPSData As String * 1000 ' Input blook from GPS
+  Public I, RMCLine
+
+  Alias ParseStrRMC(2) = GPSTime
+  Alias ParseStrRMC(4) = Latitude
+  Alias ParseStrRMC(5) = SLat
+  Alias ParseStrRMC(6) = Longitude
+  Alias ParseStrRMC(7) = SLong
+  Alias ParseStrRMC(8) = SOG
+  Alias ParseStrRMC(9) = COG
+  Alias ParseStrRMC(10) = GPSDate
+
+  SerialOpen (Com2,9600,0,0,500)
+  Scan (60,Min,0,0)
+    SW12 (2,1)
+    Delay (0,2,Min)
+    'Enter other measurement instructions
+    'Call Output Tables
+    'Example:
+    SerialInBlock (Com2,GPSData,500)
+    ' Split the block into 10 linees of information
+    SplitStr (ParseBlock,GPSData,CHR(13)+CHR(10),10,5)
+    ' Find the necessary strings and parse them
+    For I = 10 To 1 Step -1
+      If Mid(ParseBlock(I),4,3) = "RMC" Then
+        SplitStr (ParseStrRMC(1),ParseBlock(I),CHR(44),13,5)
+        RMCLine=I
+      EndIf
+    Next I
+    SerialFlush (Com2)
+    SW12(2,0)
+  NextScan
+  EndSequence '**************************** GPS *****************************************
+
+EndProg
