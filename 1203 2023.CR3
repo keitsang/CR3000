@@ -123,7 +123,41 @@ Units PIR_F_V=V
 
 
 'Define Data Tables.
-Include "tables_3M_buoy.cr3"
+DataTable(Table10,true,-1)
+   OpenInterval
+   DataInterval(0,10,Min,10)
+   Average(1,AirTemp,FP2, 0)
+   Average(1,RelHum,FP2,0)
+   Average(1,WaterTemp,FP2, 0)
+   Maximum(1,AirTemp,FP2,0,False)
+   Minimum(1,AirTemp,FP2,0,False)
+   Sample(1,Buoy_Dir,FP2)
+   Totalize(1,SolarRad,FP2,0)
+   Totalize(1,PIRcor_FG,FP2,0)
+   Average(1,PIRcor_F,FP2,0)
+   Average(1,PIR_F,FP2,0)
+   Average(2,TEppley(),FP2,False)
+   WindVector(1, Windspeed, WDCalcul, FP2, 0, 0, 0, 2)
+   FieldNames("MeanWS,VectorWS,VectorWD,StDevWD")
+   Maximum(1,Windspeed,FP2,0,False)
+   Sample(1,BarPress,FP2)
+EndTable
+
+DataTable(Table60,true,-1)
+   OpenInterval
+   DataInterval(0,60,Min,10)
+   Sample(1,PanTemp,FP2)
+   Sample(1,LoggerVolt,FP2)
+   Sample(1,Sig,FP2)
+   Sample(1,LoggerID,Long)
+   Sample(1,BattVolt,FP2)
+   Sample (1,GPSDate,String)
+   Sample (1,GPSTime,String)
+   Sample (1,Latitude,String)
+   Sample (1,Longitude,String)
+   Sample (1,SLat,String)
+   Sample (1,SLong,String)
+EndTable
 
 'Main Program
 BeginProg
@@ -183,16 +217,114 @@ BeginProg
     Sig = Status.ProgSignature(1,1)/1000
     LoggerID = Status.SerialNumber
 
-    Include "modem_iridium.cr3"
+        ' Set Flag1 to turn on the modem on startup
+    If (StartUp < 20*60) Then
+      ModemOn = True
+      StartUp = StartUp + SCANRATE
+    Else If (StartUp = 20*60) Then
+      ModemOn = False
+      StartUp = StartUp + SCANRATE
+    EndIf
+
+    ' For every MODEMCYC minutes, turn on modem after MODEMSTART minutes have passed
+    If TimeIntoInterval(MODEMSTART,MODEMCYC,Min) Then
+      ModemOn = True
+    EndIf
+    ' Send Iridium setup strings after mode has booted up
+    If TimeIntoInterval(MODEMSTART+1,MODEMCYC,Min) Then
+      SerialOut (ComMe,SETUPSTR,"",0,0)
+    EndIf
+    If TimeIntoInterval(MODEMSTART+2,MODEMCYC,Min) Then
+      SerialOut (ComMe,REGSTR,"",0,0)
+    EndIf
+    ' Turn off modem after MODEMDUR minutes has passed
+    If TimeIntoInterval(MODEMSTART+MODEMDUR,MODEMCYC,Min) Then
+      ModemOn = False
+    EndIf
+
+    If ModemOn Then ' Turns modem on
+      PortSet (8 ,1 )
+      SerialOpen (ComMe,19200,0,0,10000)
+    Else
+      PortSet (8 ,0 ) ' Turns modem off
+      SerialClose (ComMe)
+    EndIf
 
     'Call Output Tables
     CallTable (Table10)
     CallTable (Table60)
   NextScan
 
-Include "compass.cr3"
+  SlowSequence '**************************** Compass *****************************************
 
-Include "gps.cr3"
+  'Public CompStr As String
+  Public DirStr As String
+  Public PRStr As String
+
+  SerialOpen (Com1,9600,0,0,100)
+  SerialOut (Com1,"h" + CHR(13),":",0,STIMEOUT)
+  Delay (1,1000,mSec)
+  SerialOut (Com1,"sdo=t" + CHR(13),":",0,STIMEOUT)
+  SerialClose (Com1)
+
+  Scan (5,sec,3,0)
+    ' Read TCM2, Input C2
+    SerialOpen (Com1,9600,0,0,100)
+
+    SerialOut (Com1,"c?" + CHR(13),":",0,STIMEOUT)
+    SerialIn (DirStr,Com1,STIMEOUT,CHR(13),50)'Take measurement
+
+    'SerialFlush(Com1)
+    'SerialOut (Com1,"i?" + CHR(13),":",0,STIMEOUT) '
+    'SerialIn (PRStr,Com1,STIMEOUT,CHR(13),50)'Take measurement
+
+    SerialClose (Com1)
+
+    SplitStr(DirStr,DirStr,"E",1,5)
+    SplitStr(PRStr,PRStr,"E",1,5)
+
+    SplitStr (Buoy_Dir,DirStr,"$C",1,4)
+    'SplitStr (Roll,PRStr,"R",1,4)
+    'SplitStr (Pitch,PRStr,"$P",1,4)
+    'CallTable (TableCompass)
+  NextScan
+  EndSequence '**************************** Compass *****************************************
+
+  SlowSequence '**************************** GPS *****************************************
+  Public ParseStrRMC(13) As String * 15
+  Public ParseBlock(10) As String * 80  'Split blook into 10 different lines
+  Public GPSData As String * 1000 ' Input blook from GPS
+  Public I, RMCLine
+
+  Alias ParseStrRMC(2) = GPSTime
+  Alias ParseStrRMC(4) = Latitude
+  Alias ParseStrRMC(5) = SLat
+  Alias ParseStrRMC(6) = Longitude
+  Alias ParseStrRMC(7) = SLong
+  Alias ParseStrRMC(8) = SOG
+  Alias ParseStrRMC(9) = COG
+  Alias ParseStrRMC(10) = GPSDate
+
+  SerialOpen (Com2,9600,0,0,500)
+  Scan (60,Min,0,0)
+    SW12 (2,1)
+    Delay (0,2,Min)
+    'Enter other measurement instructions
+    'Call Output Tables
+    'Example:
+    SerialInBlock (Com2,GPSData,500)
+    ' Split the block into 10 linees of information
+    SplitStr (ParseBlock,GPSData,CHR(13)+CHR(10),10,5)
+    ' Find the necessary strings and parse them
+    For I = 10 To 1 Step -1
+      If Mid(ParseBlock(I),4,3) = "RMC" Then
+        SplitStr (ParseStrRMC(1),ParseBlock(I),CHR(44),13,5)
+        RMCLine=I
+      EndIf
+    Next I
+    SerialFlush (Com2)
+    SW12(2,0)
+  NextScan
+  EndSequence '**************************** GPS *****************************************
 
 EndProg
-
