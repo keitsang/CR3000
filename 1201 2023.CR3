@@ -55,7 +55,7 @@ Const MODEMCYC = 180 'the overall modem pattern length
 Const SETUPSTR = "AT&F0 S0=1 &D0 +IPR=6,0 V0 &K0 &W0 &Y0" & CHR(13) & CHR(10)
 Const REGSTR = "ATDT1234" &CHR (13) & CHR (10)
 
-Const VANCOR = 0
+Const VANCOR = 180
 Const MAGDEC = -9.70
 
 ' Latitude: 	42.5817° N
