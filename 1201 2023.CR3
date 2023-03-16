@@ -43,7 +43,7 @@
 'Date:
 'Program author:
 
-StationName ("1201 2023")
+StationName ("12-01 2023")
 
 'Declare Constants
 Const SCANRATE = 5
