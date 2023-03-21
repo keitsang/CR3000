@@ -48,7 +48,7 @@ StationName ("12-03 2023")
 'Declare Constants
 Const SCANRATE = 5
 Const STIMEOUT = 500
-Const MODEMSTART = 100 'how many minutes into the cycle before the modem turns on
+Const MODEMSTART = 60 'how many minutes into the cycle before the modem turns on
 Const MODEMDUR = 20 'how long the modem stays on
 Const MODEMCYC = 180 'the overall modem pattern length
 
