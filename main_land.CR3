@@ -36,6 +36,8 @@
 'Date:
 'Program author:
 
+StationName ("CCIW Lawn 2023")
+
 'Declare Constants
 Const SCANRATE = 5
 Const STIMEOUT = 500
@@ -52,11 +54,6 @@ Const MAGDEC = -11.66
 
 'Latitude: 43.5161° North
 'Longitude: 77.0537° West
-'Date: 2020-03-12
-'Magnetic declination: 11° 53.28' West
-'Annual Change (minutes/year): 1.3 '/y East
-'Grid Declination: 10° 28.42' West
-'Convergence Angle: 1° 24.86' West
 
 Const SIGMA = 5.67 * 10^-8
 Const A = 1.0295 * 10^-3
@@ -66,15 +63,14 @@ Const C = 1.568 * 10^-7
 Const PSP = 8.11 '19230
 Const PIR = 3.04 '33933
 
-Const SETRAMULT = 0.005197  '6978526, cert 10965, y = 0.005197x + 79.997960
-Const SETRAOFF = 79.997960
-Const RHMULT = 0.092009  '51377102/139137, cert 11015, y = 0.092009x + 8.382074
-Const RHOFF = 8.382074
-Const RTMULT = 0.099242  'cert 10995, y = 0.099242x - 39.765935
-Const RTOFF = -39.765935
+Const SETRAMULT = 0.006  'generic for testing
+Const SETRAOFF = 80
+Const RHMULT = 0.1  '
+Const RHOFF = 0
+Const RTMULT = 0.1  '
+Const RTOFF = -40
 
 'Declare Public Variables
-Public StartUp, ModemOn
 Public Windspeed,VanDir,WDCalcul,Buoy_Dir
 Public AirTemp,RelHum,BarPress
 Public SolarRad,PIR_F,PIRcor_F,PIRcor_FG,TEppley(2),Vt(2)
@@ -118,7 +114,7 @@ Units PIR_F_V=V
 
 
 'Define Data Tables.
-Include "datatables.cr3"
+Include "tables_land.cr3"
 
 'Main Program
 BeginProg
@@ -176,9 +172,12 @@ BeginProg
     LoggerID = Status.SerialNumber
 
 
-    'Include "modem.CR3"
+    'Include "modem_cell.CR3"
 
     'Call Output Tables
+    CallTable Table60
+    CallTable Table10
+    
     'Example:
   NextScan
 

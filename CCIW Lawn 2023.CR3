@@ -1,49 +1,42 @@
 'CR3000 Series Datalogger
-'3-meter Buoys: CR3000	
-'	
+
 'SE1 (1H):	Wind Direction AZ+
 'SE2 (1L):	Setra Barometric Pressure Signal
-'	
+'
 'SE3 (2H):	Rotronic AT
 'SE4 (2L):	Rotronic RH
-'	
-'SE5 (3H):	Water Temperature 107B Signal
-'SE6 (3L) :	Not Used – Future Integration
-'	
+'
+'SE5 (3H):	NOT Used – Future Integration
+'SE6 (3L):	NOT Used
+'
 'Diff4 (4H):	PSP Signal+
 'Diff4 (4L):	PSP Signal-
-'	
-'Diff5 (5H):	Not Used – PAR channel if added in future
+'
+'Diff5 (5H):	NOT Used – PAR channel If added in future
 'Diff5 (5L)L	NOT Used
-'	
+'
 'Diff6 (6H):	PIR Signal-
 'Diff6 (6L):	PIR Signal+
-'	
+'
 'Diff7 (7H):	PIR Tcase+
 'Diff7 (7L):	PIR Tdome+
-'	
+'
 'Diff8 (8H) :	10 :1 Battery Voltage+
 'Diff8 8L) :	10 :1 Battery Voltage-
-'	
+'
 'VX1 :	RM Young Wind Direction Az Excitation
 'VX2:	PIR 44301 Thermistor Tcase & Tdome Excitation
-'VX3:	Water Temperature W107B Excitation
-'	
+'
+'
 'P1:	RM Young Wind Speed WS+
-'	
-'Com1 (C1):	Compass RS-232 TX
-'Com1 (C2):	Compass RS-232 RX
-'	
-'Com2 (C3):	GPS RS-232 TX
-'Com2 (C4) :	GPS RS-232 RX
-'	
+'
 'C8	Cell OR Iridium Modem Control Trigger
 
-'
+
 'Date:
 'Program author:
 
-StationName ("3M Buoy")
+StationName ("CCIW Lawn 2023")
 
 'Declare Constants
 Const SCANRATE = 5
@@ -61,11 +54,6 @@ Const MAGDEC = -11.66
 
 'Latitude: 43.5161° North
 'Longitude: 77.0537° West
-'Date: 2020-03-12
-'Magnetic declination: 11° 53.28' West
-'Annual Change (minutes/year): 1.3 '/y East
-'Grid Declination: 10° 28.42' West
-'Convergence Angle: 1° 24.86' West
 
 Const SIGMA = 5.67 * 10^-8
 Const A = 1.0295 * 10^-3
@@ -75,23 +63,20 @@ Const C = 1.568 * 10^-7
 Const PSP = 8.11 '19230
 Const PIR = 3.04 '33933
 
-Const SETRAMULT = 0.005197  '6978526, cert 10965, y = 0.005197x + 79.997960
-Const SETRAOFF = 79.997960
-Const RHMULT = 0.092009  '51377102/139137, cert 11015, y = 0.092009x + 8.382074
-Const RHOFF = 8.382074
-Const RTMULT = 0.099242  'cert 10995, y = 0.099242x - 39.765935
-Const RTOFF = -39.765935
+Const SETRAMULT = 0.006  'generic for testing
+Const SETRAOFF = 80
+Const RHMULT = 0.1  '
+Const RHOFF = 0
+Const RTMULT = 0.1  '
+Const RTOFF = -40
 
 'Declare Public Variables
 Public Windspeed,VanDir,WDCalcul,Buoy_Dir
-Public WaterTemp
 Public AirTemp,RelHum,BarPress
 Public SolarRad,PIR_F,PIRcor_F,PIRcor_FG,TEppley(2),Vt(2)
 Public AirTemp_V,RelHum_V,BarPress_V,SolarRad_V,PIR_F_V
 Public PanTemp,BattVolt,Sig,LoggerVolt
 Public LoggerID As Long
-Public ModemOn = True
-Public StartUp = True
 
 'Declare Private Variables
 Dim Work1(2),Work2(2),i1
@@ -127,8 +112,36 @@ Units SolarRad_V=V
 Units PIR_F_V=V
 
 
+
 'Define Data Tables.
-Include "tables_3M_buoy.cr3"
+DataTable(Table10,true,-1)
+   OpenInterval
+   DataInterval(0,10,Min,10)
+   Average(1,AirTemp,FP2, 0)
+   Average(1,RelHum,FP2,0)
+   Maximum(1,AirTemp,FP2,0,False)
+   Minimum(1,AirTemp,FP2,0,False)
+   Sample(1,Buoy_Dir,FP2)
+   Totalize(1,SolarRad,FP2,0)
+   Totalize(1,PIRcor_FG,FP2,0)
+   Average(1,PIRcor_F,FP2,0)
+   Average(1,PIR_F,FP2,0)
+   Average(2,TEppley(),FP2,False)
+   WindVector(1, Windspeed, WDCalcul, FP2, 0, 0, 0, 2)
+   FieldNames("MeanWS,VectorWS,VectorWD,StDevWD")
+   Maximum(1,Windspeed,FP2,0,False)
+   Sample(1,BarPress,FP2)
+EndTable
+
+DataTable(Table60,true,-1)
+   OpenInterval
+   DataInterval(0,60,Min,10)
+   Sample(1,PanTemp,FP2)
+   Sample(1,LoggerVolt,FP2)
+   Sample(1,Sig,FP2)
+   Sample(1,LoggerID,Long)
+   Sample(1,BattVolt,FP2)
+EndTable
 
 'Main Program
 BeginProg
@@ -154,9 +167,6 @@ BeginProg
     ' Measure the MP102 relative humidity
     VoltSe (RelHum_V,1,mV5000,4,1,0,250,1,0)
     RelHum = RelHum_V * RHMULT + RHOFF
-
-    ' Read Water Temperature with 107B Probe
-    Therm107(WaterTemp,1,5,VX3,0,250,1,0)
 
     ' Read Eppley Pyranometer PSP
     VoltDiff(SolarRad_V,1,mV50,4,true,0,250,1,0)
@@ -188,16 +198,14 @@ BeginProg
     Sig = Status.ProgSignature(1,1)/1000
     LoggerID = Status.SerialNumber
 
-    Include "modem_iridium.cr3"
+
+    'Include "modem_cell.CR3"
 
     'Call Output Tables
-    CallTable (Table10)
-    CallTable (Table60)
+    CallTable Table60
+    CallTable Table10
+    
+    'Example:
   NextScan
 
-Include "compass.cr3"
-
-Include "gps.cr3"
-
 EndProg
-
