@@ -307,7 +307,7 @@ BeginProg
   SerialOpen (Com2,9600,0,0,500)
   Scan (60,Min,0,0)
     SW12 (2,1)
-    Delay (0,2,Min)
+    Delay (0,10,Min)
     'Enter other measurement instructions
     'Call Output Tables
     'Example:
