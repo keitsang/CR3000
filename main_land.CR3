@@ -172,7 +172,7 @@ BeginProg
     LoggerID = Status.SerialNumber
 
 
-    'Include "modem_cell.CR3"
+    Include "modem_cell.CR3"
 
     'Call Output Tables
     CallTable Table60
