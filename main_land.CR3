@@ -41,7 +41,7 @@ StationName ("CCIW Lawn 2023")
 'Declare Constants
 Const SCANRATE = 5
 Const STIMEOUT = 500
-Const MODEMSTART = 100 'how many minutes into the cycle before the modem turns on
+Const MODEMSTART = 80 'how many minutes into the cycle before the modem turns on
 Const MODEMDUR = 20 'how long the modem stays on
 Const MODEMCYC = 180 'the overall modem pattern length
 
@@ -77,6 +77,8 @@ Public SolarRad,PIR_F,PIRcor_F,PIRcor_FG,TEppley(2),Vt(2)
 Public AirTemp_V,RelHum_V,BarPress_V,SolarRad_V,PIR_F_V
 Public PanTemp,BattVolt,Sig,LoggerVolt
 Public LoggerID As Long
+Public ModemOn = True
+Public StartUp = True
 
 'Declare Private Variables
 Dim Work1(2),Work2(2),i1
@@ -172,7 +174,7 @@ BeginProg
     LoggerID = Status.SerialNumber
 
 
-    Include "modem_cell.CR3"
+    Include "modem_iridium.CR3"
 
     'Call Output Tables
     CallTable Table60

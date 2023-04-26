@@ -41,7 +41,7 @@ StationName ("CCIW Lawn 2023")
 'Declare Constants
 Const SCANRATE = 5
 Const STIMEOUT = 500
-Const MODEMSTART = 100 'how many minutes into the cycle before the modem turns on
+Const MODEMSTART = 80 'how many minutes into the cycle before the modem turns on
 Const MODEMDUR = 20 'how long the modem stays on
 Const MODEMCYC = 180 'the overall modem pattern length
 
@@ -77,6 +77,8 @@ Public SolarRad,PIR_F,PIRcor_F,PIRcor_FG,TEppley(2),Vt(2)
 Public AirTemp_V,RelHum_V,BarPress_V,SolarRad_V,PIR_F_V
 Public PanTemp,BattVolt,Sig,LoggerVolt
 Public LoggerID As Long
+Public ModemOn = True
+Public StartUp = True
 
 'Declare Private Variables
 Dim Work1(2),Work2(2),i1
@@ -199,8 +201,7 @@ BeginProg
     LoggerID = Status.SerialNumber
 
 
-    Public StartUp, ModemOn
-    ' Turn on the modem on startup
+        ' Set Flag1 to turn on the modem on startup
     If (StartUp < 20*60) Then
       ModemOn = True
       StartUp = StartUp + SCANRATE
@@ -213,17 +214,16 @@ BeginProg
     If TimeIntoInterval(MODEMSTART,MODEMCYC,Min) Then
       ModemOn = True
     EndIf
+    ' Send Iridium setup strings after mode has booted up
+    If TimeIntoInterval(MODEMSTART+1,MODEMCYC,Min) Then
+      SerialOut (ComMe,SETUPSTR,"",0,0)
+    EndIf
+    If TimeIntoInterval(MODEMSTART+2,MODEMCYC,Min) Then
+      SerialOut (ComMe,REGSTR,"",0,0)
+    EndIf
     ' Turn off modem after MODEMDUR minutes has passed
     If TimeIntoInterval(MODEMSTART+MODEMDUR,MODEMCYC,Min) Then
       ModemOn = False
-    EndIf
-
-    'Power cycle modems at midnight    
-    If TimeIntoInterval(5*60,24*60,Min) Then
-      ModemOn = False
-    EndIf
-    If TimeIntoInterval(5*60+1,24*60,Min) Then
-      ModemOn = True
     EndIf
 
     If ModemOn Then ' Turns modem on

@@ -24,9 +24,9 @@
     EndIf
 
     If ModemOn Then ' Turns modem on
-      PortSet (8 ,1 )
+      PortSet (9,1 )
       SerialOpen (ComMe,19200,0,0,10000)
     Else
-      PortSet (8 ,0 ) ' Turns modem off
+      PortSet (9,0  ) ' Turns modem off
       SerialClose (ComMe)
     EndIf
