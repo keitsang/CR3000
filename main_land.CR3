@@ -66,14 +66,14 @@ Const RTMULT = 0.1  '
 Const RTOFF = -40
 
 'Declare Public Variables
-Public Windspeed,VanDir,WDCalcul,Buoy_Dir
+Public Windspeed,VanDir,WDCalcul
 Public AirTemp,RelHum,BarPress
 Public SolarRad,PIR_F,PIRcor_F,PIRcor_FG,TEppley(2),Vt(2)
 Public AirTemp_V,RelHum_V,BarPress_V,SolarRad_V,PIR_F_V
 Public PanTemp,BattVolt,Sig,LoggerVolt
 Public LoggerID As Long
 Public ModemOn = True
-Public StartUp = True
+Public StartUp = 0
 
 'Declare Private Variables
 Dim Work1(2),Work2(2),i1
@@ -92,7 +92,6 @@ Units RelHum=%
 Units Windspeed=m/s
 Units VanDir=Dir
 Units WDCalcul=Dir T
-Units Buoy_Dir=Deg T
 Units SolarRad=kJ/m^2
 Units PIRcor_FG=kJ/m^2
 Units PIRcor_F=W/m^2
