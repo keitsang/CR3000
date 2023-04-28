@@ -1,4 +1,5 @@
-    Public StartUp, ModemOn
+    Public StartUp = 0
+    Public ModemOn = True
     ' Turn on the modem on startup
     If (StartUp < 20*60) Then
       ModemOn = True
@@ -17,7 +18,7 @@
     EndIf
 
     If ModemOn Then ' Turns modem on
-      PortSet (8 ,1 )
+      PortSet (9,1 )
     Else
-      PortSet (8 ,0 ) ' Turns modem off
+      PortSet (9,0  ) ' Turns modem off
     EndIf
