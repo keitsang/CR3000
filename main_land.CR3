@@ -49,11 +49,6 @@ Const SETUPSTR = "AT&F0 S0=1 &D0 +IPR=6,0 V0 &K0 &W0 &Y0" & CHR(13) & CHR(10)
 Const REGSTR = "ATDT1234" &CHR (13) & CHR (10)
 
 Const VANCOR = 0
-Const MAGDEC = -11.66
-'2022-04-22	11.66° W  ± 0.39°  changing by  0.04° E per year
-
-'Latitude: 43.5161° North
-'Longitude: 77.0537° West
 
 Const SIGMA = 5.67 * 10^-8
 Const A = 1.0295 * 10^-3
@@ -126,10 +121,8 @@ BeginProg
     ' Read RM Young Wind Vane
     BrHalf(VanDir,1,mV5000,1,VX1,1,5000,True,0,250,355,0)
     VanDir = (VanDir + VANCOR) MOD 360
-    ' Add correction to Buoy Direction due to mount orientation or magnetic declination.
-    Buoy_Dir = (Buoy_Dir + MAGDEC) MOD 360 '(360-11.926 degrees)
     ' Add RM Young Van Direction to KVH Buoy Dir to get wind direction calculated
-    WDCalcul = (VanDir + Buoy_Dir) MOD 360
+    WDCalcul = VanDir MOD 360
 
     ' Measure the Setra Barometric Pressure (coeffs using cal sheet)
     VoltSe(BarPress_V,1,mV5000,2,true,0,250,1,0)
