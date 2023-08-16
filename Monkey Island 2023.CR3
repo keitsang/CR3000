@@ -36,12 +36,12 @@
 'Date:
 'Program author:
 
-StationName ("CCIW Lawn 2023")
+StationName ("Monkey Island 2023")
 
 'Declare Constants
 Const SCANRATE = 5
 Const STIMEOUT = 500
-Const MODEMSTART = 80 'how many minutes into the cycle before the modem turns on
+Const MODEMSTART = 140 'how many minutes into the cycle before the modem turns on
 Const MODEMDUR = 20 'how long the modem stays on
 Const MODEMCYC = 180 'the overall modem pattern length
 
@@ -55,11 +55,11 @@ Const A = 1.0295 * 10^-3
 Const B = 2.391 * 10^-4
 Const C = 1.568 * 10^-7
 
-Const PSP = 8.11 '19230
-Const PIR = 3.04 '33933
+Const PSP = 8.11 '37817, 11/11/2022
+Const PIR = 3.25 '37803, 11/3/2022
 
-Const SETRAMULT = 0.006  'generic for testing
-Const SETRAOFF = 80
+Const SETRAMULT = 0.005981  'cert 11322, serial 7246325, y = 0.005981x + 79.998398
+Const SETRAOFF = 79.998398
 Const RHMULT = 0.1  '
 Const RHOFF = 0
 Const RTMULT = 0.1  '
@@ -110,33 +110,7 @@ Units PIR_F_V=V
 
 
 'Define Data Tables.
-DataTable(Table10,true,-1)
-   OpenInterval
-   DataInterval(0,10,Min,10)
-   Average(1,AirTemp,FP2, 0)
-   Average(1,RelHum,FP2,0)
-   Maximum(1,AirTemp,FP2,0,False)
-   Minimum(1,AirTemp,FP2,0,False)
-   Totalize(1,SolarRad,FP2,0)
-   Totalize(1,PIRcor_FG,FP2,0)
-   Average(1,PIRcor_F,FP2,0)
-   Average(1,PIR_F,FP2,0)
-   Average(2,TEppley(),FP2,False)
-   WindVector(1, Windspeed, WDCalcul, FP2, 0, 0, 0, 2)
-   FieldNames("MeanWS,VectorWS,VectorWD,StDevWD")
-   Maximum(1,Windspeed,FP2,0,False)
-   Sample(1,BarPress,FP2)
-EndTable
-
-DataTable(Table60,true,-1)
-   OpenInterval
-   DataInterval(0,60,Min,10)
-   Sample(1,PanTemp,FP2)
-   Sample(1,LoggerVolt,FP2)
-   Sample(1,Sig,FP2)
-   Sample(1,LoggerID,Long)
-   Sample(1,BattVolt,FP2)
-EndTable
+Include "tables_land.cr3"
 
 'Main Program
 BeginProg
@@ -192,38 +166,7 @@ BeginProg
     LoggerID = Status.SerialNumber
 
 
-        ' Set Flag1 to turn on the modem on startup
-    If (StartUp < 20*60) Then
-      ModemOn = True
-      StartUp = StartUp + SCANRATE
-    Else If (StartUp = 20*60) Then
-      ModemOn = False
-      StartUp = StartUp + SCANRATE
-    EndIf
-
-    ' For every MODEMCYC minutes, turn on modem after MODEMSTART minutes have passed
-    If TimeIntoInterval(MODEMSTART,MODEMCYC,Min) Then
-      ModemOn = True
-    EndIf
-    ' Send Iridium setup strings after mode has booted up
-    If TimeIntoInterval(MODEMSTART+1,MODEMCYC,Min) Then
-      SerialOut (ComMe,SETUPSTR,"",0,0)
-    EndIf
-    If TimeIntoInterval(MODEMSTART+2,MODEMCYC,Min) Then
-      SerialOut (ComMe,REGSTR,"",0,0)
-    EndIf
-    ' Turn off modem after MODEMDUR minutes has passed
-    If TimeIntoInterval(MODEMSTART+MODEMDUR,MODEMCYC,Min) Then
-      ModemOn = False
-    EndIf
-
-    If ModemOn Then ' Turns modem on
-      PortSet (9,1 )
-      SerialOpen (ComMe,19200,0,0,10000)
-    Else
-      PortSet (9,0  ) ' Turns modem off
-      SerialClose (ComMe)
-    EndIf
+    Include "modem_iridium.CR3"
 
     'Call Output Tables
     CallTable Table60
