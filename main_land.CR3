@@ -55,8 +55,8 @@ Const A = 1.0295 * 10^-3
 Const B = 2.391 * 10^-4
 Const C = 1.568 * 10^-7
 
-Const PSP = 7.70 '37501, cert 11/4/2022
-Const PIR = 3.44 '32227, cert 11/4/2022
+Const PSP = 7.70 '32256, cert 11/4/2022
+Const PIR = 3.44 '35500, cert 11/4/2022
 
 Const SETRAMULT = 0.019995  'cert 11321, serial 5851461, y = 0.019995x + 59.909867
 Const SETRAOFF = 59.909867
