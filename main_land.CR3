@@ -36,7 +36,7 @@
 'Date:
 'Program author:
 
-StationName ("CCIW Lawn 2023")
+StationName ("Gimli 2023")
 
 'Declare Constants
 Const SCANRATE = 5
@@ -55,11 +55,11 @@ Const A = 1.0295 * 10^-3
 Const B = 2.391 * 10^-4
 Const C = 1.568 * 10^-7
 
-Const PSP = 8.11 '19230
-Const PIR = 3.04 '33933
+Const PSP = 7.70 '37501, cert 11/4/2022
+Const PIR = 3.44 '32227, cert 11/4/2022
 
-Const SETRAMULT = 0.006  'generic for testing
-Const SETRAOFF = 80
+Const SETRAMULT = 0.019995  'cert 11321, serial 5851461, y = 0.019995x + 59.909867
+Const SETRAOFF = 59.909867
 Const RHMULT = 0.1  '
 Const RHOFF = 0
 Const RTMULT = 0.1  '
